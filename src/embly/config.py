@@ -194,6 +194,13 @@ def load_config(explicit: Path | None = None) -> Config:
 # dotted key -> (section, field, kind) where kind drives value parsing.
 # Covers all model knobs plus the thresholds users tune alongside them.
 SETTABLE_KEYS: dict[str, tuple[str, str, str]] = {
+    "paths.root": ("paths", "root", "str"),
+    "paths.inbox": ("paths", "inbox", "str"),
+    "paths.organized": ("paths", "organized", "str"),
+    "paths.unsorted": ("paths", "unsorted", "str"),
+    "paths.db": ("paths", "db", "str"),
+    "paths.texts": ("paths", "texts", "str"),
+    "paths.logs": ("paths", "logs", "str"),
     "ocr.engine": ("ocr", "engine", "str"),
     "ocr.langs": ("ocr", "langs", "str_list"),
     "ocr.min_mean_confidence": ("ocr", "min_mean_confidence", "float"),

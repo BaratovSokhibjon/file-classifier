@@ -43,8 +43,9 @@ def _temp_dir() -> Iterator[Path]:
 
 def run_ocr(paths: list[Path], ctx: ExtractContext) -> Extraction:
     """OCR language strategy: try each configured language, early-exit when one clears the
-    confidence threshold, otherwise keep the best-scoring pass."""
-    best_text, best_source, best_mean = "", "", 0.0
+    confidence threshold, otherwise keep the best-scoring pass. No text anywhere
+    (e.g. photos) → ``ocr:no-text`` instead of a blank source."""
+    best_text, best_source, best_mean = "", "", -1.0
     for lang in ctx.ocr.langs:
         texts: list[str] = []
         scores: list[float] = []
@@ -59,9 +60,11 @@ def run_ocr(paths: list[Path], ctx: ExtractContext) -> Extraction:
         source = f"ocr:{lang}({mean:.2f})"
         if texts and mean >= ctx.ocr.min_mean_confidence:
             return Extraction("\n".join(texts), source)
-        if mean > best_mean:
+        if (texts or scores) and mean >= best_mean:
             best_text, best_source, best_mean = "\n".join(texts), source, mean
-    return Extraction(best_text, best_source)
+    if best_source:
+        return Extraction(best_text, best_source)
+    return Extraction("", "ocr:no-text", ok=False)
 
 
 class TextExtractor:

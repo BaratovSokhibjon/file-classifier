@@ -60,6 +60,7 @@ class LayaEngine:
         self._router: Any = None
         self._agent: Any = None
         self._embed_fn: Any = None
+        self._embed_cache: dict[str, list[float]] = {}
 
     def decide(self, state: dict, categories: list[Category]) -> Decision:
         import laya
@@ -83,16 +84,14 @@ class LayaEngine:
         )
 
     def embed(self, text: str) -> list[float]:
-        return list(self._get_embed_fn()(text))
+        if text in self._embed_cache:
+            return self._embed_cache[text]
+        vec = list(self._get_embed_fn()([text])[0])
+        self._embed_cache[text] = vec
+        return vec
 
     def clear_cache(self) -> None:
-        if self._embed_fn is None:
-            return
-        for name in ("cache_clear", "clear"):
-            clear = getattr(self._embed_fn, name, None)
-            if callable(clear):
-                clear()
-                return
+        self._embed_cache.clear()
 
     def _laya_device(self) -> Any:
         return None if self._policy.device == "auto" else self._policy.device
@@ -119,5 +118,5 @@ class LayaEngine:
         if self._embed_fn is None:
             import laya
 
-            self._embed_fn = laya.cached_embed_fn(laya.embed_fn_from_agent(self._get_agent()))
+            self._embed_fn = laya.embed_fn_from_agent(self._get_agent())
         return self._embed_fn

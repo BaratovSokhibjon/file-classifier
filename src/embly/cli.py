@@ -29,6 +29,7 @@ from embly.discover import Discoverer, DiscoverReport
 from embly.extract import TextExtractor
 from embly.extract.base import gather
 from embly.ingest import Ingester, IngestResult
+from embly.organize import Organizer
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 cats_app = typer.Typer(no_args_is_help=True)
@@ -48,6 +49,7 @@ class _Services:
     categories: CategoryService
     ingester: Ingester
     discoverer: Discoverer
+    organizer: Organizer
 
 
 def _services(config: Optional[Path]) -> _Services:
@@ -64,8 +66,10 @@ def _services(config: Optional[Path]) -> _Services:
                         novelty=cfg.novelty)
     discoverer = Discoverer(conn, engine, categories, NamingClient(cfg.naming_llm),
                            cfg.novelty, cfg.paths)
+    organizer = Organizer(conn, categories, cfg.paths, cfg.naming)
     return _Services(cfg=cfg, conn=conn, extractor=extractor, engine=engine,
-                     categories=categories, ingester=ingester, discoverer=discoverer)
+                     categories=categories, ingester=ingester, discoverer=discoverer,
+                     organizer=organizer)
 
 
 def _print_table(rows: list[IngestResult]) -> None:
@@ -103,9 +107,13 @@ def status(config: Annotated[Optional[Path], typer.Option(help="config.toml")] =
         "SELECT value FROM meta WHERE key='schema_version'"
     ).fetchone()
     schema_version = schema_row["value"] if schema_row else "?"
-    out.print(f"[bold]root[/bold]    {cfg.paths.root}")
-    out.print(f"[bold]inbox[/bold]   {cfg.paths.inbox}")
-    out.print(f"[bold]db[/bold]      {cfg.paths.db} (schema v{schema_version})")
+    out.print(f"[bold]root[/bold]       {cfg.paths.root}")
+    out.print(f"[bold]inbox[/bold]      {cfg.paths.inbox}")
+    out.print(f"[bold]organized[/bold] {cfg.paths.organized}")
+    out.print(f"[bold]unsorted[/bold]   {cfg.paths.unsorted}")
+    out.print(f"[bold]db[/bold]         {cfg.paths.db} (schema v{schema_version})")
+    out.print(f"[bold]texts[/bold]      {cfg.paths.texts}")
+    out.print(f"[bold]logs[/bold]       {cfg.paths.logs}")
     try:
         import torch
 
@@ -207,6 +215,27 @@ def reclassify(
         raise typer.Exit(0)
     err.print(f"reclassified {len(rows)} file(s) with {len(active)} categories")
     _print_table(rows)
+
+
+@app.command()
+def organize(
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="show destinations without moving")] = False,
+    status: Annotated[str, typer.Option(help="comma-separated statuses to organize")] = "classified,review",
+    config: Annotated[Optional[Path], typer.Option(help="config.toml")] = None,
+) -> None:
+    """Move classified/review files into the organized tree."""
+    services = _services(config)
+    statuses = tuple(s.strip() for s in status.split(",") if s.strip())
+    results = services.organizer.organize(statuses, dry_run=dry_run)
+    if not results:
+        err.print("[yellow]no files to organize (nothing with current_path IS NULL).[/yellow]")
+        raise typer.Exit(0)
+    table = Table(show_header=True, header_style="bold")
+    for column in ("file", "category", "status", "moved_to"):
+        table.add_column(column)
+    for row in results:
+        table.add_row(row.file, row.category or "—", row.status, row.moved_to or "—")
+    out.print(table)
 
 
 @cats_app.command("add")
