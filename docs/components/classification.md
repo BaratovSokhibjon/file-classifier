@@ -1,6 +1,6 @@
 # Component 3 — Classification (laya core)
 
-> Source: `src/fileclassifier/classify/laya_core.py`. Status: planning only.
+> Source: `src/embly/classify/laya_core.py`. Status: planning only.
 
 ## Responsibility
 
@@ -73,13 +73,13 @@ Gate on **`answer_confidence`** (the probability of the reported answer), not ra
 | < `review_confidence` (0.45) | Hand to the [novelty pipeline](novelty-and-emergence.md) |
 
 Thresholds are **policy, derived from your data** — start conservative and let
-`fileclassifier tune` refine them. Note: `laya-multilingual` ships without fitted
+`embly tune` refine them. Note: `laya-multilingual` ships without fitted
 calibration temperatures and is over-confident as shipped, so the numbers are best
 treated as a ranking signal initially.
 
 ## Audit
 
-Every decision is appended to `decisions` and to `.fc/logs/decisions.jsonl` via a laya
+Every decision is appended to `decisions` and to `.embly/logs/decisions.jsonl` via a laya
 `on_predict_end` hook: routing model, elapsed ms, full answer distribution, shortlist.
 This is the raw material for `tune`.
 

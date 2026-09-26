@@ -4,7 +4,7 @@
 
 | # | Milestone | What it adds | Verification |
 |---|---|---|---|
-| **M0** | Scaffold | `pyproject.toml` (uv), config loader, DB + migration runner, typer skeleton, `status` | `uv run fileclassifier status` runs and prints paths, device, DB version |
+| **M0** | Scaffold | `pyproject.toml` (uv), config loader, DB + migration runner, typer skeleton, `status` | `uv run embly status` runs and prints paths, device, DB version |
 | **M1** | Extraction layer | All extractors + registry, MIME sniffing, sha256 dedupe, text cache. **No ML.** | `ingest tests/fixtures/*` prints the extracted text head per file; uz/ru/en OCR fixture passes |
 | **M2** | laya core | Router, question builder, shortlist, confidence gates, decision audit; `categories add` + `classify FILE` | Hand-add 3 categories, classify fixtures → choice + confidence + routing printed |
 | **M3** | Novelty + emergence | Embeddings, centroids, clustering, Ollama naming, provisional categories; zero-category bootstrap | Fresh DB, drop 3 unknown-type docs → a provisional category is auto-created and files land in it, flagged review |

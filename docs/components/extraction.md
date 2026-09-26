@@ -1,6 +1,6 @@
 # Component 2 — Extraction (Universal Text Layer)
 
-> Source: `src/fileclassifier/extract/`. Status: planning only.
+> Source: `src/embly/extract/`. Status: planning only.
 
 ## Responsibility
 
@@ -65,4 +65,4 @@ against the PaddleOCR-on-Apple-Silicon install risk.
 ## Output
 
 A single string plus a label for which extractor ran. Text is written to
-`.fc/texts/<sha256>.txt`; only the path and extractor name go in the DB.
+`.embly/texts/<sha256>.txt`; only the path and extractor name go in the DB.

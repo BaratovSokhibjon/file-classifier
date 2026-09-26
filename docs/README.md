@@ -1,4 +1,4 @@
-# file-classifier — Documentation
+# embly — Documentation
 
 Build plan for a local watch-folder daemon that auto-organizes files. Files dropped
 into `inbox/` are text-extracted (OCR / native text / transcription), classified by

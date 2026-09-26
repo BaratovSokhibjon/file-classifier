@@ -1,6 +1,6 @@
 # Component 7 — Review Loop
 
-> Source: `src/fileclassifier/review.py`. Status: planning only.
+> Source: `src/embly/review.py`. Status: planning only.
 
 ## Responsibility
 
@@ -41,10 +41,10 @@ For each file the TUI shows:
 Every assign/create writes a `corrections` row (`source='review'`). These serve two
 purposes:
 
-1. **Threshold tuning** — `fileclassifier tune` compares corrected outcomes against the
+1. **Threshold tuning** — `embly tune` compares corrected outcomes against the
    confidence each file received, and suggests new `assign_confidence` /
    `review_confidence` values for the coverage/accuracy trade-off you want.
-2. **Fine-tuning dataset** — `fileclassifier finetune export` turns corrections (plus
+2. **Fine-tuning dataset** — `embly finetune export` turns corrections (plus
    confident decisions, optionally) into a laya-format `.jsonl` so the checkpoint can be
    specialized on your documents later. See [Build Order](../delivery/build-order.md) M8.
 

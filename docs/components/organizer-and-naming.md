@@ -1,6 +1,6 @@
 # Component 6 — Organizer & Naming
 
-> Source: `src/fileclassifier/organize.py`. Status: planning only.
+> Source: `src/embly/organize.py`. Status: planning only.
 
 ## Responsibility
 
@@ -50,7 +50,7 @@ scope for v1 — fall back to the file modified date.
 
 ## Retroactive rename
 
-`fileclassifier rename-files [--all | --category X]` re-renders every affected filename
+`embly rename-files [--all | --category X]` re-renders every affected filename
 from the template. Used after:
 
 - editing `naming.template`,
@@ -76,4 +76,4 @@ def make_slug(text: str, max_words: int = 4) -> str: ...
 - **Same rendered name, different content:** sequence suffix.
 - **Very long originals:** truncate the stem, keep the extension.
 - **Hidden/underscore-prefixed categories:** disallowed at creation (would collide with
-  the `.fc/` dot-directory convention).
+  the `.embly/` dot-directory convention).

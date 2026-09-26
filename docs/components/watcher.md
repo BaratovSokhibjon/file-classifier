@@ -1,6 +1,6 @@
 # Component 1 — Watcher
 
-> Source: `src/fileclassifier/watch.py`. Status: planning only.
+> Source: `src/embly/watch.py`. Status: planning only.
 
 ## Responsibility
 
@@ -24,9 +24,9 @@ single worker loop that runs the pipeline.
 
 | Mode | Command | Use |
 |---|---|---|
-| Daemon | `fileclassifier watch` | Normal operation; watches `inbox/` |
-| One-shot | `fileclassifier watch --once` | Drain everything pending, then exit |
-| Backfill | `fileclassifier ingest PATH` | Ad-hoc file or folder; reuses the same pipeline |
+| Daemon | `embly watch` | Normal operation; watches `inbox/` |
+| One-shot | `embly watch --once` | Drain everything pending, then exit |
+| Backfill | `embly ingest PATH` | Ad-hoc file or folder; reuses the same pipeline |
 
 `--once` and `ingest` are the test harness: they make the whole pipeline runnable from a
 test with no background process.

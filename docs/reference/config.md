@@ -1,13 +1,13 @@
 # Configuration Reference
 
-> Source: `src/fileclassifier/config.py`. Status: planning only.
-> File: `config.toml` (repo-local) or `~/.config/fileclassifier/config.toml`.
+> Source: `src/embly/config.py`. Status: planning only.
+> File: `config.toml` (repo-local) or `~/.config/embly/config.toml`.
 > Precedence: CLI flag > env var > config file > built-in default.
 
 ```toml
 [paths]
-inbox = "~/Documents/fileclassifier/inbox"
-root  = "~/Documents/fileclassifier"
+inbox = "~/Documents/embly/inbox"
+root  = "~/Documents/embly"
 
 [naming]
 template = "{date}_{category}_{slug}"
@@ -46,7 +46,7 @@ on_duplicate = "skip"             # "skip" | "suffix"
 
 ## Notes
 
-- **Thresholds are policy.** The defaults are starting points; `fileclassifier tune`
+- **Thresholds are policy.** The defaults are starting points; `embly tune`
   derives better values from your corrections. See [Classification](components/classification.md).
 - **`ocr.engine`** is the documented swap seam: the pipeline depends on the `Extractor`
   protocol, not on PaddleOCR directly.

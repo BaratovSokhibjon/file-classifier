@@ -1,7 +1,7 @@
 # 03 — Data Model
 
-> Status: implemented in `src/fileclassifier/db.py` (schema v2). SQLite, `journal_mode=WAL`,
-> `PRAGMA foreign_keys=ON`, single file at `.fc/classifier.db`.
+> Status: implemented in `src/embly/db.py` (schema v2). SQLite, `journal_mode=WAL`,
+> `PRAGMA foreign_keys=ON`, single file at `.embly/embly.db`.
 > Timestamps are ISO-8601 `TEXT` locally and map to `TIMESTAMPTZ DEFAULT now()` on Postgres;
 > `BLOB` vectors map to `pgvector vector(dim)`; `INTEGER PRIMARY KEY` maps to
 > `BIGINT GENERATED ALWAYS AS IDENTITY`.
@@ -83,7 +83,7 @@ stateDiagram-v2
 
 ## Tables
 
-See `src/fileclassifier/db.py` for the authoritative DDL. Shape (constraints abbreviated):
+See `src/embly/db.py` for the authoritative DDL. Shape (constraints abbreviated):
 
 ```sql
 CREATE TABLE categories (
@@ -200,13 +200,13 @@ pending ─▶ processing ─▶ classified         # filed, confident
                       └─▶ error             # no text extracted (unsupported/binary)
 ```
 
-- `review` and `novel` are the two statuses surfaced by `fileclassifier review`.
+- `review` and `novel` are the two statuses surfaced by `embly review`.
 - A correction moves a file to `classified` and writes a `corrections` row.
 - Removing a category moves its files to `review` (parked in `unsorted/`), then triggers
   re-classification against the remaining set.
 
 ## Text cache
 
-Extracted text lives at `.fc/texts/<sha256>.txt`, not in the DB. The DB stores only
+Extracted text lives at `.embly/texts/<sha256>.txt`, not in the DB. The DB stores only
 the path (`text_extractor` records provenance). This keeps the database small and makes
 re-classification a pure function of cached text + current categories.

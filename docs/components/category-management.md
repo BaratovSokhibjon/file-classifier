@@ -1,6 +1,6 @@
 # Component 5 — Category Management
 
-> Source: `src/fileclassifier/categories.py`. Status: planning only.
+> Source: `src/embly/categories.py`. Status: planning only.
 
 ## Responsibility
 

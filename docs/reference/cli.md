@@ -1,22 +1,22 @@
 # CLI Reference
 
-> Source: `src/fileclassifier/cli.py` (typer). Status: planning only.
+> Source: `src/embly/cli.py` (typer). Status: planning only.
 
-Entry point: `fileclassifier` (a short alias can be added later).
+Entry point: `embly` (a short alias can be added later).
 
 ## Daily use
 
 ```
-fileclassifier watch [--inbox PATH] [--once]   # daemon, or drain-once
-fileclassifier status                           # counts, model/device, ollama state
-fileclassifier review                           # interactive TUI over review + novel
+embly watch [--inbox PATH] [--once]   # daemon, or drain-once
+embly status                           # counts, model/device, ollama state
+embly review                           # interactive TUI over review + novel
 ```
 
 ## Ingest
 
 ```
-fileclassifier ingest PATH                      # a file or a folder (recursive)
-fileclassifier classify FILE                    # debug: print choice, confidence, routing
+embly ingest PATH                      # a file or a folder (recursive)
+embly classify FILE                    # debug: print choice, confidence, routing
 ```
 
 `classify` is a read-only diagnostic — it runs the pipeline in memory and prints the full
@@ -25,13 +25,13 @@ answer, without moving the file.
 ## Categories
 
 ```
-fileclassifier categories list
-fileclassifier categories show NAME
-fileclassifier categories add NAME --desc "criteria text"
-fileclassifier categories describe NAME --desc "criteria text"
-fileclassifier categories rename OLD NEW
-fileclassifier categories remove NAME
-fileclassifier categories merge A B
+embly categories list
+embly categories show NAME
+embly categories add NAME --desc "criteria text"
+embly categories describe NAME --desc "criteria text"
+embly categories rename OLD NEW
+embly categories remove NAME
+embly categories merge A B
 ```
 
 Every mutating category command triggers re-classification of the affected scope
@@ -40,16 +40,16 @@ Every mutating category command triggers re-classification of the affected scope
 ## Re-processing
 
 ```
-fileclassifier reclassify [--all | --category X | --status review | --status novel]
-fileclassifier rename-files [--all | --category X]
+embly reclassify [--all | --category X | --status review | --status novel]
+embly rename-files [--all | --category X]
 ```
 
 ## Accuracy
 
 ```
-fileclassifier tune                             # confidence histogram vs corrections
+embly tune                             # confidence histogram vs corrections
                                                 # → suggested thresholds
-fileclassifier finetune export [--out data.jsonl]
+embly finetune export [--out data.jsonl]
 ```
 
 ## Global flags

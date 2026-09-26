@@ -1,6 +1,6 @@
 # Component 4 — Novelty & Emergence
 
-> Sources: `src/fileclassifier/classify/novelty.py`, `src/fileclassifier/classify/naming_llm.py`.
+> Sources: `src/embly/classify/novelty.py`, `src/embly/classify/naming_llm.py`.
 > Status: planning only.
 
 ## Responsibility

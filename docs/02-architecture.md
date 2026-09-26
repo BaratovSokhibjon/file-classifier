@@ -17,7 +17,7 @@ Dispatch (mime + magic sniff)
    └── audio/video ─▶ ffmpeg ─▶ 16k mono wav ─▶ Whisper
    │
    ▼
-SQLite: file row (sha256, text cached to .fc/texts/<sha>.txt)
+SQLite: file row (sha256, text cached to .embly/texts/<sha>.txt)
    │
    ▼
 Embed (laya embed_fn, mmBERT mean-pool) ─▶ novelty check vs category centroids
@@ -40,17 +40,17 @@ CLI review loop ─▶ user corrections ─▶ decisions/corrections audit ─�
 - **The LLM is boxed in.** Ollama only ever receives excerpts to produce a name and a
   one-line description. It never classifies and is optional (`naming.mode = "manual"`).
 - **Confidence is policy, not truth.** Thresholds are configurable and re-derived from
-  measured corrections via `fileclassifier tune`.
+  measured corrections via `embly tune`.
 
 ## Runtime directory layout
 
 ```
-~/Documents/fileclassifier/          # root, configurable
+~/Documents/embly/          # root, configurable
 ├── inbox/                           # watched drop folder
 ├── organized/<Category>/            # sorted output tree
 ├── unsorted/                        # low-confidence / removed-category parking
-└── .fc/
-    ├── classifier.db                # SQLite (WAL)
+└── .embly/
+    ├── embly.db                # SQLite (WAL)
     ├── texts/<sha256>.txt           # cached extracted text
     └── logs/decisions.jsonl         # append-only decision audit
 ```
@@ -58,11 +58,11 @@ CLI review loop ─▶ user corrections ─▶ decisions/corrections audit ─�
 ## Source layout
 
 ```
-file-classifier/
+embly/
 ├── pyproject.toml            # uv-managed, Python 3.12; extras: [ocr] [media] [llm] [office]
 ├── config.toml.example
 ├── docs/                     # this documentation
-├── src/fileclassifier/
+├── src/embly/
 │   ├── cli.py                # typer app: all commands
 │   ├── config.py             # tomllib + defaults
 │   ├── db.py                 # sqlite3 stdlib, WAL, tiny migration runner
