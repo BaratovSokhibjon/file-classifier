@@ -12,10 +12,10 @@
 ## Architecture (see CONTEXT.md for domain terms)
 
 Thin typer CLI (`src/embly/cli.py`, entry `embly = embly.cli:main`) over one pipeline:
-`extract` → `classify` → `categories` → `ingest` → `discover`, configured by grouped
-policies in `config.py`. `Ingester.ingest_many` and `Discoverer.discover` are the
-interfaces the future watcher will also use — keep them that way.
-`docs/` is planning material and partly aspirational (mentions `watch.py`, `organize.py`,
+`extract` → `classify` → `categories` → `ingest` → `discover` → `organize`, configured by
+grouped policies in `config.py`. `Ingester.ingest_many`, `Discoverer.discover`, and
+`Organizer.organize` are the interfaces the future watcher will also use — keep them that way.
+`docs/` is planning material and partly aspirational (mentions `watch.py`,
 `review.py`, `tune.py` — none exist yet). Trust `src/` over `docs/` on what is built.
 
 ## Seams — always inject fakes in tests (see `tests/fakes.py`)
@@ -53,7 +53,8 @@ lazy-imported inside methods. Never instantiate the real ones in tests:
 - Extracted text is cached at `.embly/texts/<sha256>.txt` only when non-blank; decisions append to
   `.embly/logs/decisions.jsonl` only when a category was chosen. `files.vec` is stored only for
   novel files (classified/review files carry `NULL`).
-- `files.current_path` stays `NULL` until the (unbuilt) organizer moves it — don't assert otherwise.
+- `files.current_path` is set by `Organizer.organize` when a file is moved into
+  `organized/<Category>/`; until then it stays `NULL`.
 - Category `slug` is the laya choice label and `description` is the laya criteria text:
   `add`/`describe` reject blank descriptions; `remove` parks member files to `review` with
   `category_id=NULL`; `merge` moves files then soft-removes the source.

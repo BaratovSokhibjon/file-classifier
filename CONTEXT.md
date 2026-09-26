@@ -24,7 +24,9 @@ into an emergent, user-managed taxonomy, and filed into `organized/<Category>/`.
   pending novel files (`novelty.cluster_cosine`) and naming each cluster (LLM or
   fallback) into a provisional `auto_created` category.
 - **Organizer / Naming** — moving a file into the organized tree and rendering its name
-  from a template. Not yet built.
+  from a template (`{date}_{category}_{slug}`, with `{original}`, `{seq}`, `{ext}` tokens).
+  Collision handling appends `_1`, `_2`, … before the extension. Files with no category
+  park in `unsorted/`.
 - **Review** — the queue of `review` and `novel` files a human corrects; corrections
   become ground truth.
 
@@ -46,6 +48,9 @@ into an emergent, user-managed taxonomy, and filed into `organized/<Category>/`.
 - **`discover`** (`Discoverer`) — the discovery module. Interface:
   `discover(min_cluster_size, dry_run) -> DiscoverReport`. Hides embedding backfill,
   clustering, LLM naming (with fallback), category creation, and file assignment.
+- **`organize`** (`Organizer`) — the organizer. Interface:
+  `organize(statuses, dry_run) -> [OrganizeResult]`. Hides the naming template,
+  collision sequencing, and the unsorted parking lot. Sets `files.current_path`.
 - **`config`** — grouped policy objects (`Paths`, `OcrPolicy`, `ClassifyPolicy`,
   `NamingPolicy`, `NoveltyPolicy`) inside one `Config`; each module receives only the
   policy it uses.

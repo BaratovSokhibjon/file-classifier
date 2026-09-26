@@ -59,6 +59,13 @@ def test_ocr_language_strategy_keeps_best_when_none_clear():
     assert result.text == "b" and result.source.startswith("ocr:ru")
 
 
+def test_ocr_finds_no_text_anywhere():
+    engine = FakeOcrEngine({"uz": ([], []), "ru": ([], []), "en": ([], [])})
+    ctx = ExtractContext(ocr=OcrPolicy(langs=("uz", "ru", "en")), engine=engine)
+    result = run_ocr([Path("x.png")], ctx)
+    assert result.text == "" and result.source == "ocr:no-text" and result.ok is False
+
+
 def test_engine_failure_becomes_a_result_not_an_exception(tmp_path):
     class BoomEngine:
         def recognize(self, path, lang):
