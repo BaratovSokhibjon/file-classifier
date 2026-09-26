@@ -1,0 +1,37 @@
+[paths]
+inbox = "~/Documents/embly/inbox"
+root  = "~/Documents/embly"
+
+[naming]
+template = "{date}_{category}_{slug}"
+
+[ocr]
+engine = "paddle"
+langs  = ["uz", "ru", "en"]
+min_mean_confidence = 0.80
+max_pdf_ocr_pages   = 50
+rasterize_dpi       = 300
+
+[classify]
+shortlist_k       = 12
+shortlist_threshold = 16
+assign_confidence = 0.70
+review_confidence = 0.45
+max_text_tokens   = 3000
+batch_size        = 32
+
+[novelty]
+cosine         = 0.55
+cluster_cosine = 0.75
+
+[naming_llm]
+mode  = "llm"
+model = "qwen3:4b"
+host  = "http://127.0.0.1:11434"
+
+[media]
+whisper_model = "small"
+ffmpeg        = "ffmpeg"
+
+[dedupe]
+on_duplicate = "skip"

@@ -1,0 +1,11 @@
+{
+	"recommendations": [
+		"nhoizey.gremlins",
+		"mikestead.dotenv",
+		"timonwong.shellcheck",
+		"editorconfig.editorconfig",
+		"wengerk.highlight-bad-chars",
+		"piotrpalarz.vscode-gitignore-generator",
+		"ms-vscode-remote.vscode-remote-extensionpack",
+	]
+}
