@@ -19,7 +19,7 @@ Thin typer CLI (`src/embly/cli.py`, entry `embly = embly.cli:main`) over one pip
 
 ## Seams — always inject fakes in tests (see `tests/fakes.py`)
 
-Heavy deps are optional extras (`ocr`, `office`, `media`, `llm` in `pyproject.toml`) and are
+Heavy deps are core (`paddleocr` for OCR) or optional extras (`office`, `media`, `llm` in `pyproject.toml`) and are
 lazy-imported inside methods. Never instantiate the real ones in tests:
 
 - `TextExtractor(ocr, engine=...)` — default engine is `PaddleEngine` (loads PaddleOCR per lang);

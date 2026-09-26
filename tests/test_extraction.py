@@ -72,3 +72,31 @@ def test_engine_failure_becomes_a_result_not_an_exception(tmp_path):
 
 def test_extraction_dataclass_defaults_ok():
     assert Extraction("t", "src").ok is True
+
+
+def test_missing_ocr_extra_returns_friendly_source():
+    from embly.extract.base import run_ocr
+
+    class MissingEngine:
+        def recognize(self, path, lang):
+            raise ModuleNotFoundError("paddleocr")
+
+    ctx = ExtractContext(ocr=OcrPolicy(langs=("en",)), engine=MissingEngine())
+    result = run_ocr([Path("x.png")], ctx)
+    assert result == Extraction("", "ocr-extra-not-installed", ok=False)
+
+
+def test_gather_skips_embly_internals_and_dotfiles(tmp_path):
+    from embly.extract.base import gather
+
+    (tmp_path / ".embly").mkdir()
+    (tmp_path / ".embly" / "embly.db").write_bytes(b"db")
+    (tmp_path / ".embly" / "texts").mkdir()
+    (tmp_path / ".embly" / "texts" / "abc.txt").write_text("cached")
+    (tmp_path / ".hidden").write_text("h")
+    inbox = tmp_path / "inbox"
+    inbox.mkdir()
+    (inbox / "a.txt").write_text("a")
+
+    found = {p.name for p in gather([tmp_path])}
+    assert found == {"a.txt"}

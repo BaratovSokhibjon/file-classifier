@@ -13,6 +13,12 @@ max_pdf_ocr_pages   = 50
 rasterize_dpi       = 300
 
 [classify]
+model             = "convaiinnovations/laya"
+subfolder         = "multilingual"   # "" = english root checkpoint
+router_default    = "multilingual"   # english | multilingual | typed-decisions
+router_preload    = ["english", "multilingual"]
+device            = "auto"           # auto | cpu | cuda | mps
+max_len           = 8192
 shortlist_k       = 12
 shortlist_threshold = 16
 assign_confidence = 0.70
@@ -30,8 +36,10 @@ model = "qwen3:4b"
 host  = "http://127.0.0.1:11434"
 
 [media]
-whisper_model = "small"
-ffmpeg        = "ffmpeg"
+whisper_model        = "small"   # tiny | base | small | medium | large-v3 ...
+whisper_device       = "cpu"
+whisper_compute_type = "int8"    # int8 | float16 | float32 ...
+ffmpeg               = "ffmpeg"
 
 [dedupe]
 on_duplicate = "skip"
