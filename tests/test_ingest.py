@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fakes import FakeDecisionEngine
+from fakes import FakeDecisionEngine, FakeExtractor
 
 from embly.categories import CategoryService
 from embly.config import ClassifyPolicy, Config, NamingPolicy, NoveltyPolicy, OcrPolicy, Paths
@@ -9,17 +9,7 @@ from embly.extract import Extraction
 from embly.ingest import Ingester
 
 
-class FakeExtractor:
-    def __init__(self, mapping: dict[str, Extraction]) -> None:
-        self.mapping = mapping
-        self.calls: list[str] = []
-
-    def extract(self, path, mime=None) -> Extraction:
-        self.calls.append(path.name)
-        return self.mapping.get(path.name, Extraction("", "unsupported", ok=False))
-
-
-def make_config(tmp_path, **classify_overrides) -> Config:
+def make_config(tmp_path, novelty_overrides=None, **classify_overrides) -> Config:
     root = tmp_path / "fc"
     paths = Paths(
         root=root,
@@ -35,17 +25,19 @@ def make_config(tmp_path, **classify_overrides) -> Config:
         ocr=OcrPolicy(),
         classify=ClassifyPolicy(**classify_overrides),
         naming=NamingPolicy(),
-        novelty=NoveltyPolicy(),
+        novelty=NoveltyPolicy(**(novelty_overrides or {})),
     )
 
 
-def build(tmp_path, engine, extractor, *, categories=(), **classify_overrides):
-    cfg = make_config(tmp_path, **classify_overrides)
+def build(tmp_path, engine, extractor, *, categories=(), novelty_overrides=None,
+          **classify_overrides):
+    cfg = make_config(tmp_path, novelty_overrides=novelty_overrides, **classify_overrides)
     conn = connect(cfg.paths.db)
     service = CategoryService(conn, embed=engine.embed)
     for name, description in categories:
         service.add(name, description)
-    ingester = Ingester(conn, extractor, engine, service, cfg.paths, cfg.classify)
+    ingester = Ingester(conn, extractor, engine, service, cfg.paths, cfg.classify,
+                        novelty=cfg.novelty)
     return cfg, conn, ingester, service
 
 
@@ -89,27 +81,76 @@ def test_low_confidence_flags_review(tmp_path):
     assert ingester.ingest(path).status == "review"
 
 
-def test_very_low_confidence_flags_novel(tmp_path):
+def test_very_low_confidence_flags_novel_when_dissimilar(tmp_path):
     engine = FakeDecisionEngine(choice="invoice", confidence=0.2)
     extractor = FakeExtractor({"a.txt": Extraction("text", "text")})
     _, _, ingester, _ = build(
         tmp_path, engine, extractor,
         categories=[("invoice", "bills")],
-        review_confidence=0.45,
+        novelty_overrides={"cosine": 0.99},
     )
     path = tmp_path / "a.txt"
     path.write_text("text")
     assert ingester.ingest(path).status == "novel"
 
 
-def test_no_categories_means_novel_without_classifying(tmp_path):
-    engine = FakeDecisionEngine()
+def test_centroid_similarity_flips_novel_to_review(tmp_path):
+    engine = FakeDecisionEngine(choice="invoice", confidence=0.2)
     extractor = FakeExtractor({"a.txt": Extraction("text", "text")})
-    _, _, ingester, _ = build(tmp_path, engine, extractor)
+    _, conn, ingester, _ = build(
+        tmp_path, engine, extractor,
+        categories=[("invoice", "bills")],
+        novelty_overrides={"cosine": 0.55},
+    )
     path = tmp_path / "a.txt"
     path.write_text("text")
     result = ingester.ingest(path)
-    assert result.status == "novel" and engine.calls == 0
+    assert result.status == "review"
+    row = conn.execute("SELECT vec FROM files").fetchone()
+    assert row["vec"] is None
+
+
+def test_novel_file_keeps_vec_for_discover(tmp_path):
+    engine = FakeDecisionEngine(choice="invoice", confidence=0.2)
+    extractor = FakeExtractor({"a.txt": Extraction("text", "text")})
+    _, conn, ingester, _ = build(
+        tmp_path, engine, extractor,
+        categories=[("invoice", "bills")],
+        novelty_overrides={"cosine": 0.99},
+    )
+    path = tmp_path / "a.txt"
+    path.write_text("text")
+    result = ingester.ingest(path)
+    assert result.status == "novel"
+    row = conn.execute("SELECT vec FROM files").fetchone()
+    assert row["vec"] is not None
+
+
+def test_classified_file_gets_no_embedding(tmp_path):
+    engine = FakeDecisionEngine(choice="invoice", confidence=0.9)
+    extractor = FakeExtractor({"a.txt": Extraction("hello invoice", "text")})
+    _, conn, ingester, _ = build(tmp_path, engine, extractor, categories=[("invoice", "bills")])
+    path = tmp_path / "a.txt"
+    path.write_text("hello invoice")
+    embeds_before = engine.embed_calls  # category centroid creation already embeds once
+
+    ingester.ingest(path)
+
+    assert engine.embed_calls == embeds_before
+    row = conn.execute("SELECT vec FROM files").fetchone()
+    assert row["vec"] is None
+
+
+def test_no_categories_means_novel_without_classifying(tmp_path):
+    engine = FakeDecisionEngine()
+    extractor = FakeExtractor({"a.txt": Extraction("text", "text")})
+    _, conn, ingester, _ = build(tmp_path, engine, extractor)
+    path = tmp_path / "a.txt"
+    path.write_text("text")
+    result = ingester.ingest(path)
+    assert result.status == "novel" and engine.calls == 0 and engine.embed_calls == 0
+    row = conn.execute("SELECT vec FROM files").fetchone()
+    assert row["vec"] is None
 
 
 def test_failed_extraction_records_error(tmp_path):

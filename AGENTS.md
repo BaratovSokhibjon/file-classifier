@@ -12,8 +12,9 @@
 ## Architecture (see CONTEXT.md for domain terms)
 
 Thin typer CLI (`src/embly/cli.py`, entry `embly = embly.cli:main`) over one pipeline:
-`extract` → `classify` → `categories` → `ingest`, configured by grouped policies in `config.py`.
-`Ingester.ingest_many` is the interface the future watcher will also use — keep it that way.
+`extract` → `classify` → `categories` → `ingest` → `discover`, configured by grouped
+policies in `config.py`. `Ingester.ingest_many` and `Discoverer.discover` are the
+interfaces the future watcher will also use — keep them that way.
 `docs/` is planning material and partly aspirational (mentions `watch.py`, `organize.py`,
 `review.py`, `tune.py` — none exist yet). Trust `src/` over `docs/` on what is built.
 
@@ -27,8 +28,12 @@ lazy-imported inside methods. Never instantiate the real ones in tests:
 - `LayaEngine` implements the `DecisionEngine` protocol (`decide`/`embed`/`clear_cache`,
   downloads checkpoints on first use); pass `FakeDecisionEngine`
 - `CategoryService(conn, embed=..., clear_embed_cache=..., on_change=...)` — pass a lambda embed
-  or nothing (centroid then stays `None`)
-- `Ingester(conn, extractor, engine, categories, paths, classify)` with `connect(tmp_path / "t.db")`
+  or nothing (centroid then stays `None`); `assign_files` is the seam for file→category
+  mutations outside ingestion (discover, reclassify)
+- `Ingester(conn, extractor, engine, categories, paths, classify, novelty=...)` with
+  `connect(tmp_path / "t.db")`
+- `Discoverer(conn, engine, categories, naming, novelty, paths)` — pass
+  `NamingClient(NamingLlmPolicy(mode="manual"))` so tests never touch Ollama
 
 ## Gotchas that will break things silently
 
@@ -39,11 +44,15 @@ lazy-imported inside methods. Never instantiate the real ones in tests:
 - Dedupe is by `sha256` and happens *before* extraction; duplicates return `status="duplicate"`
   without calling extractor or engine.
 - Confidence gate (`ClassifyPolicy`: `assign_confidence=0.70`, `review_confidence=0.45`):
-  `>= assign` → `classified`, `>= review` → `review`, else `novel`. With zero active categories
-  the engine is never called and status is `novel`.
+  `>= assign` → `classified`, `>= review` → `review`, else the centroid novelty check —
+  a file whose max centroid cosine >= `novelty.cosine` (0.55) parks in `review`, otherwise
+  `novel` and keeps `files.vec` for discover. With zero active categories the engine
+  (decide *and* embed) is never called, status is `novel`, and no vec is stored —
+  `Discoverer` backfills embeddings lazily.
 - Failed/empty extraction → `status="error"`, engine not called, no text cached, no decision row.
 - Extracted text is cached at `.embly/texts/<sha256>.txt` only when non-blank; decisions append to
-  `.embly/logs/decisions.jsonl` only when a category was chosen.
+  `.embly/logs/decisions.jsonl` only when a category was chosen. `files.vec` is stored only for
+  novel files (classified/review files carry `NULL`).
 - `files.current_path` stays `NULL` until the (unbuilt) organizer moves it — don't assert otherwise.
 - Category `slug` is the laya choice label and `description` is the laya criteria text:
   `add`/`describe` reject blank descriptions; `remove` parks member files to `review` with

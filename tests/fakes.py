@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from embly.classify import Decision
+from embly.extract import Extraction
 
 
 class FakeDecisionEngine:
@@ -12,6 +13,7 @@ class FakeDecisionEngine:
         self.choice = choice
         self.confidence = confidence
         self.calls = 0
+        self.embed_calls = 0
         self.cleared = False
         self.last_state: dict | None = None
         self.last_categories: list | None = None
@@ -23,6 +25,7 @@ class FakeDecisionEngine:
         return Decision(choice=self.choice, confidence=self.confidence, model="fake", ms=1.0)
 
     def embed(self, text: str) -> list[float]:
+        self.embed_calls += 1
         return [float(len(text)), 1.0, 0.0]
 
     def clear_cache(self) -> None:
@@ -37,3 +40,14 @@ class FakeOcrEngine:
     def recognize(self, path: Path, lang: str) -> tuple[list[str], list[float]]:
         self.calls.append((Path(path).name, lang))
         return self.results.get(lang, ([], []))
+
+
+class FakeExtractor:
+    def __init__(self, mapping: dict[str, Extraction] | None = None) -> None:
+        self.mapping = mapping or {}
+        self.calls: list[str] = []
+
+    def extract(self, path, mime=None) -> Extraction:
+        name = Path(path).name
+        self.calls.append(name)
+        return self.mapping.get(name, Extraction("", "unsupported", ok=False))

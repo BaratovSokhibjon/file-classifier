@@ -144,6 +144,32 @@ class CategoryService:
         self._changed("all")
         return _row_to_category(self._require(dst["slug"]))
 
+    def assign_files(
+        self,
+        category_id: int,
+        file_ids: list[int],
+        *,
+        status: str = "review",
+        confidence: float | None = None,
+        routing_model: str | None = None,
+    ) -> None:
+        """Assign files to a category (discover / reclassify path).
+
+        The one seam for file→category mutations outside ingestion: keeps the
+        update atomic and fires the change hook. The ``vec`` column stays
+        pipeline-owned — callers update it separately when a file stays novel.
+        """
+        if not file_ids:
+            return
+        ts = now()
+        self._conn.executemany(
+            "UPDATE files SET category_id=?, status=?, confidence=?, routing_model=?, "
+            "updated_at=? WHERE id=?",
+            [(category_id, status, confidence, routing_model, ts, fid) for fid in file_ids],
+        )
+        self._conn.commit()
+        self._changed("all")
+
     def list_active(self) -> list[Category]:
         return [
             _row_to_category(row)

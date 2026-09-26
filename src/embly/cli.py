@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from embly.categories import CategoryService
-from embly.classify import LayaEngine, build_state
+from embly.classify import LayaEngine, NamingClient, build_state
 from embly.config import (
     SETTABLE_KEYS,
     Config,
@@ -25,6 +25,7 @@ from embly.config import (
     set_dotted_raw,
 )
 from embly.db import connect
+from embly.discover import Discoverer, DiscoverReport
 from embly.extract import TextExtractor
 from embly.extract.base import gather
 from embly.ingest import Ingester, IngestResult
@@ -46,6 +47,7 @@ class _Services:
     engine: LayaEngine
     categories: CategoryService
     ingester: Ingester
+    discoverer: Discoverer
 
 
 def _services(config: Optional[Path]) -> _Services:
@@ -58,9 +60,12 @@ def _services(config: Optional[Path]) -> _Services:
     extractor = TextExtractor(cfg.ocr, media=cfg.media)
     engine = LayaEngine(cfg.classify)
     categories = CategoryService(conn, embed=engine.embed, clear_embed_cache=engine.clear_cache)
-    ingester = Ingester(conn, extractor, engine, categories, cfg.paths, cfg.classify)
+    ingester = Ingester(conn, extractor, engine, categories, cfg.paths, cfg.classify,
+                        novelty=cfg.novelty)
+    discoverer = Discoverer(conn, engine, categories, NamingClient(cfg.naming_llm),
+                           cfg.novelty, cfg.paths)
     return _Services(cfg=cfg, conn=conn, extractor=extractor, engine=engine,
-                     categories=categories, ingester=ingester)
+                     categories=categories, ingester=ingester, discoverer=discoverer)
 
 
 def _print_table(rows: list[IngestResult]) -> None:
@@ -72,6 +77,22 @@ def _print_table(rows: list[IngestResult]) -> None:
         table.add_row(row.file, row.category or "—", confidence, row.status,
                       f"{row.ms:.0f}", row.source or "—")
     out.print(table)
+
+
+def _print_discover_report(report: DiscoverReport, naming_mode: str) -> None:
+    out.print(f"{report.novel_count} novel file(s), {report.cluster_count} cluster(s) "
+              f"({len(report.discovered)} usable, {report.small_clusters} singleton/small)")
+    for name, why in report.embed_failures:
+        err.print(f"[yellow]could not embed {name}: {why}[/yellow]")
+    for found in report.discovered:
+        out.print(f"\n[bold]{found.name}[/bold] — {found.description}")
+        out.print(f"  files: {', '.join(found.files)}")
+        if not found.used_llm and naming_mode != "manual":
+            err.print("  [yellow]warning: naming LLM unreachable — used a fallback name.[/yellow]")
+        if found.slug is not None:
+            out.print(f"  [green]created '{found.slug}' (auto_created, review)[/green]")
+        elif not found.created:
+            err.print("  [red]not created (name clash or dry run)[/red]")
 
 
 @app.command()
@@ -108,6 +129,8 @@ def status(config: Annotated[Optional[Path], typer.Option(help="config.toml")] =
 @app.command()
 def ingest(
     path: Annotated[Path, typer.Argument(help="file or directory")],
+    auto_discover: Annotated[bool, typer.Option("--auto-discover",
+                                                help="run discover after ingest")] = False,
     config: Annotated[Optional[Path], typer.Option(help="config.toml")] = None,
 ) -> None:
     services = _services(config)
@@ -115,13 +138,17 @@ def ingest(
     active = services.categories.list_active()
     if not active:
         err.print("[yellow]no categories yet — files will be recorded as 'novel'.[/yellow]")
-        err.print("[yellow]create some first: embly categories add <name> --desc '...'[/yellow]")
+        err.print("[yellow]run `embly discover` to auto-create categories from them.[/yellow]")
     files = gather([path])
     if not files:
         err.print("[red]no files found[/red]")
         raise typer.Exit(1)
     err.print(f"{len(files)} file(s), {len(active)} category(ies)")
-    _print_table(services.ingester.ingest_many(files))
+    results = services.ingester.ingest_many(files)
+    _print_table(results)
+    if auto_discover and any(r.status == "novel" for r in results):
+        report = services.discoverer.discover()
+        _print_discover_report(report, services.cfg.naming_llm.mode)
 
 
 @app.command()
@@ -142,6 +169,44 @@ def classify(
     decision = services.engine.decide(state, active)
     out.print(f"category={decision.choice}  answer_confidence={decision.confidence:.3f}  "
               f"model={decision.model}  {decision.ms:.0f}ms  ({extraction.source})")
+
+
+@app.command()
+def discover(
+    min_cluster_size: Annotated[int, typer.Option(help="minimum files per cluster")] = 2,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="show clusters without creating")] = False,
+    config: Annotated[Optional[Path], typer.Option(help="config.toml")] = None,
+) -> None:
+    """Auto-create categories from novel files by clustering + LLM naming."""
+    services = _services(config)
+    report = services.discoverer.discover(min_cluster_size, dry_run)
+    if report.novel_count == 0:
+        err.print("[yellow]no novel files. ingest something first.[/yellow]")
+        raise typer.Exit(1)
+    _print_discover_report(report, services.cfg.naming_llm.mode)
+
+
+@app.command()
+def reclassify(
+    status: Annotated[str, typer.Option(help="novel | review | all")] = "novel",
+    config: Annotated[Optional[Path], typer.Option(help="config.toml")] = None,
+) -> None:
+    """Re-run classification on existing files with current categories."""
+    if status not in ("novel", "review", "all"):
+        err.print(f"[red]unknown status: {status} (novel | review | all)[/red]")
+        raise typer.Exit(1)
+    services = _services(config)
+    active = services.categories.list_active()
+    if not active:
+        err.print("[red]no categories. add some first or run `embly discover`[/red]")
+        raise typer.Exit(1)
+    statuses = ["novel", "review", "classified"] if status == "all" else [status]
+    rows = services.ingester.reclassify(statuses)
+    if not rows:
+        err.print("[yellow]no files to reclassify.[/yellow]")
+        raise typer.Exit(0)
+    err.print(f"reclassified {len(rows)} file(s) with {len(active)} categories")
+    _print_table(rows)
 
 
 @cats_app.command("add")
@@ -244,7 +309,6 @@ def config_set(
     except Exception as e:  # noqa: BLE001
         err.print(f"[red]could not write {target}:[/red] {e}")
         raise typer.Exit(1) from e
-    # reload to prove the written file parses and coerces cleanly
     cfg = load_config(target)
     out.print(f"set [green]{key}[/green]={format_value(get_dotted(cfg, key))}  [dim]({target})[/dim]")
 
