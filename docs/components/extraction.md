@@ -59,8 +59,8 @@ against the PaddleOCR-on-Apple-Silicon install risk.
 
 - Missing `ffmpeg` → media extraction reports "disabled" once at startup; audio/video
   files park in review instead of crashing the worker.
-- Missing optional extras (`[ocr]`, `[media]`, `[office]`) → the corresponding extractor
-  is simply unavailable, with a clear message.
+- Missing optional extras (`[media]`, `[office]`) → the corresponding extractor
+  is simply unavailable, with a clear message. (OCR ships by default.)
 
 ## Output
 

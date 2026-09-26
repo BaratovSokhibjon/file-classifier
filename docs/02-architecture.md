@@ -59,7 +59,7 @@ CLI review loop ─▶ user corrections ─▶ decisions/corrections audit ─�
 
 ```
 embly/
-├── pyproject.toml            # uv-managed, Python 3.12; extras: [ocr] [media] [llm] [office]
+├── pyproject.toml            # uv-managed, Python 3.12; OCR in core, extras: [media] [llm] [office]
 ├── config.toml.example
 ├── docs/                     # this documentation
 ├── src/embly/

@@ -18,12 +18,12 @@
 | `numpy` | Embedding math, centroids, clustering |
 | `unidecode` | Transliteration for filename slugs |
 | `puremagic` | MIME sniffing (pure-Python, avoids libmagic) |
+| `paddleocr`, `paddlepaddle` | OCR for images and scanned PDFs (PP-OCRv5) |
 
 ## Optional extras
 
 | Extra | Packages | Enables |
 |---|---|---|
-| `[ocr]` | `paddleocr`, `paddlepaddle` | OCR for images and scanned PDFs |
 | `[office]` | `markitdown` | docx / xlsx / pptx / html / eml / csv |
 | `[media]` | `faster-whisper` | audio/video transcription (`ffmpeg` via brew) |
 | `[llm]` | `ollama` | Naming of new categories |
@@ -32,9 +32,8 @@
 Install examples:
 
 ```bash
-uv sync --extra ocr --extra office --extra media --extra llm
-# or minimal, native-text only:
-uv sync
+uv sync --extra office --extra media --extra llm
+# plain `uv sync` already includes OCR.
 ```
 
 ## External binaries
